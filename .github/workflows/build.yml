@@ -1,10 +1,8 @@
 name: build
 on:
   pull_request:
-    types:
-      - synchronize
-      - reopened
-      - opened
+    branches:
+      - master
   push:
     branches:
       - master
@@ -12,15 +10,9 @@ on:
 
 env:
   TAG_NAME: latest
-  MAX_KERNEL_SIZE: 0x200000
-  MAX_ROOTFS_SIZE: 0x500000
-  MAX_KERNEL_SIZE_ULTIMATE: 0x300000
-  MAX_ROOTFS_SIZE_ULTIMATE: 0xA00000
-  MAX_KERNEL_SIZE_NAND: 0x0800000
-  MAX_ROOTFS_SIZE_NAND: 0x1000000
   TG_TOKEN: ${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}
   TG_CHANNEL: ${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}
-  TG_OPTIONS: -s --connect-timeout 30 --retry 10 --http1.1 -o /dev/null -w %{http_code}
+  TG_OPTIONS: -s -o /dev/null -w %{http_code}
 
 jobs:
   buildroot:
@@ -56,7 +48,7 @@ jobs:
           - gk7205v300
           - gk7202v300
           - gk7605v100
-          - ssc338q
+          - t20
           - t31
           - t40
 
@@ -65,6 +57,34 @@ jobs:
           - ultimate
 
         include:
+            # Sigmastar infinity6
+          - {"platform": "ssc325", "release": "lite"}
+          - {"platform": "ssc325de", "release": "lite"}
+
+            # Sigmastar infinity6b0
+          - {"platform": "ssc333", "release": "lite"}
+          - {"platform": "ssc333", "release": "ultimate"}
+          - {"platform": "ssc335", "release": "lite"}
+          - {"platform": "ssc335", "release": "ultimate"}
+          - {"platform": "ssc335de", "release": "lite"}
+          - {"platform": "ssc335de", "release": "ultimate"}
+          - {"platform": "ssc337", "release": "lite"}
+          - {"platform": "ssc337", "release": "ultimate"}
+          - {"platform": "ssc337de", "release": "lite"}
+          - {"platform": "ssc337de", "release": "ultimate"}
+
+            # Sigmastar infinity6c
+          - {"platform": "ssc377", "release": "lite"}
+
+            # Sigmastar infinity6e
+          - {"platform": "ssc30kd", "release": "lite"}
+          - {"platform": "ssc30kd", "release": "ultimate"}
+          - {"platform": "ssc30kq", "release": "lite"}
+          - {"platform": "ssc30kq", "release": "ultimate"}
+          - {"platform": "ssc338q", "release": "fpv"}
+          - {"platform": "ssc338q", "release": "lite"}
+          - {"platform": "ssc338q", "release": "ultimate"}
+
           - platform: hi3518ev200
             release: mini
           - platform: hi3516cv300
@@ -75,21 +95,26 @@ jobs:
             release: fpv
           - platform: gk7205v200
             release: fpv
+          - platform: gk7205v210
+            release: fpv
           - platform: gk7205v300
             release: fpv
           - platform: hi3516ev200
             release: lte
           - platform: hi3516ev300
             release: lte
+          - platform: hi3536dv100
+            release: fpv
           - platform: gk7205v200
             release: lte
           - platform: gk7205v300
             release: lte
-
-          # Original SDK test
           - platform: gk7205v200
-            release: original
-            custom: onlyci
+            release: venc
+          - platform: gk7205v210
+            release: venc
+          - platform: gk7205v300
+            release: venc
 
           # MVP
           - platform: fh8852v100
@@ -106,17 +131,7 @@ jobs:
             release: lite
           - platform: rv1126
             release: lite
-          - platform: ssc335
-            release: lite
-          - platform: ssc335de
-            release: lite
-          - platform: ssc337
-            release: lite
-          - platform: ssc337de
-            release: lite
           - platform: t10
-            release: lite
-          - platform: t20
             release: lite
           - platform: t21
             release: lite
@@ -155,9 +170,6 @@ jobs:
           - platform: s3l
             release: lite
             custom: onlyci
-          - platform: ssc325
-            release: lite
-            custom: onlyci
 
         exclude:
           - platform: hi3516cv100
@@ -194,8 +206,6 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: Setup ccache
         if: github.event_name != 'pull_request'
@@ -211,14 +221,17 @@ jobs:
           path: /tmp/ccache
           key: ${{matrix.platform}}_${{matrix.release}}
 
-      - name: Build firmware
+      - name: Download files
         run: |
           echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
-          MODEL=${{matrix.platform}}
-          RELEASE=${{matrix.release}}
-          CONFIG=$(find br-ext-chip-* -name ${MODEL}_${RELEASE}_defconfig)
-          IMAGES=${GITHUB_WORKSPACE}/output/images
+          echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts
+          make prepare
+          git clone https://github.com/openipc/br-cache
+          ln -s ${GITHUB_WORKSPACE}/br-cache $(ls -d output/buildroot-*)/dl
+          make BOARD=${{matrix.platform}}_${{matrix.release}} br-source
 
+      - name: Build firmware
+        run: |
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
           export GIT_BRANCH=${GITHUB_REF_NAME}
           echo GIT_HASH=${GIT_HASH} >> ${GITHUB_ENV}
@@ -226,70 +239,19 @@ jobs:
 
           mkdir -p /tmp/ccache
           ln -s /tmp/ccache ${HOME}/.ccache
-
-          echo ------------------------------------------------------------
-          echo ${CONFIG}
-          echo ------------------------------------------------------------
-          cat ${CONFIG}
-          echo ------------------------------------------------------------
-          make BOARD=${CONFIG} all
-          echo ------------------------------------------------------------
+          make BOARD=${{matrix.platform}}_${{matrix.release}} all
 
           TIME=$(date -d @${SECONDS} +%M:%S)
           echo TIME=${TIME} >> ${GITHUB_ENV}
-          echo Build time: ${TIME}
 
-          check_size() {
-            SIZE1=$(expr $(stat --printf="%s" ${1}) / 1024)
-            SIZE2=$(expr ${2} / 1024)
-            echo - ${1}: [${SIZE1}KB/${SIZE2}KB]
-            if [ ${SIZE1} -gt ${SIZE2} ]; then
-              echo -- Error: size exceeded by $(expr ${SIZE1} - ${SIZE2})KB
-              exit 1
-            fi
-          }
-
-          EXCLUDE="hi3516cv500"
-          if [ ${RELEASE} = "ultimate" ] || grep -qP ${EXCLUDE} ${CONFIG}; then
-            MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
-            MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
-          fi
-
-          mkdir -p /tmp/openipc
-          cd /tmp/openipc
-
-          if [ -e ${IMAGES}/uImage ]; then
-            mv ${IMAGES}/uImage uImage.${MODEL}
-            md5sum uImage.${MODEL} > uImage.${MODEL}.md5sum
-            check_size uImage.${MODEL} ${MAX_KERNEL_SIZE}
-          fi
-
-          if [ -e ${IMAGES}/zboot.img ]; then
-            mv ${IMAGES}/zboot.img boot.img.${MODEL}
-            md5sum boot.img.${MODEL} > boot.img.${MODEL}.md5sum
-            check_size boot.img.${MODEL} ${MAX_KERNEL_SIZE_NAND}
-            rm -f ${IMAGES}/rootfs.squashfs
-          fi
-
-          if [ -e ${IMAGES}/rootfs.squashfs ]; then
-            mv ${IMAGES}/rootfs.squashfs rootfs.squashfs.${MODEL}
-            md5sum rootfs.squashfs.${MODEL} > rootfs.squashfs.${MODEL}.md5sum
-            check_size rootfs.squashfs.${MODEL} ${MAX_ROOTFS_SIZE}
-
-            NORFW=${IMAGES}/openipc.${MODEL}-nor-${RELEASE}.tgz
+          NORFW=${GITHUB_WORKSPACE}/output/images/openipc.${{matrix.platform}}-nor-${{matrix.release}}.tgz
+          if [ -e ${NORFW} ]; then
             echo NORFW=${NORFW} >> ${GITHUB_ENV}
-            tar czf ${NORFW} $(ls)
           fi
 
-          if [ -e ${IMAGES}/rootfs.ubi ]; then
-            mv ${IMAGES}/rootfs.ubi rootfs.ubi.${MODEL}
-            md5sum rootfs.ubi.${MODEL} > rootfs.ubi.${MODEL}.md5sum
-            check_size rootfs.ubi.${MODEL} ${MAX_ROOTFS_SIZE_NAND}
-            rm -f rootfs.squashfs*
-
-            NANDFW=${IMAGES}/openipc.${MODEL}-nand-${RELEASE}.tgz
+          NANDFW=${GITHUB_WORKSPACE}/output/images/openipc.${{matrix.platform}}-nand-${{matrix.release}}.tgz
+          if [ -e ${NANDFW} ]; then
             echo NANDFW=${NANDFW} >> ${GITHUB_ENV}
-            tar czf ${NANDFW} $(ls)
           fi
 
       - name: Upload firmware
@@ -301,6 +263,15 @@ jobs:
             ${{env.NORFW}}
             ${{env.NANDFW}}
 
+      - name: Send binary
+        if: github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.NORFW
+        run: |
+          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\nTime: ${TIME}\n\n"
+          TG_ICON="\xE2\x9C\x85 GitHub Actions"
+          TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})
+          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
+          echo Telegram response: ${HTTP}
+
       - name: Send error
         if: github.event_name != 'pull_request' && failure()
         run: |
@@ -309,14 +280,4 @@ jobs:
           TG_ICON="\xE2\x9A\xA0 GitHub Actions"
           TG_HEADER=$(echo -e ${TG_WARN}${TG_MSG}${TG_ICON})
           HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendMessage -F chat_id=${TG_CHANNEL} -F text="${TG_HEADER}")
-          echo Telegram response: ${HTTP}
-          exit 2
-
-      - name: Send binary
-        if: github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.NORFW
-        run: |
-          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\nTime: ${TIME}\n\n"
-          TG_ICON="\xE2\x9C\x85 GitHub Actions"
-          TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})
-          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
           echo Telegram response: ${HTTP}

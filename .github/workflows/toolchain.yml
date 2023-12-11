@@ -35,6 +35,7 @@ jobs:
           - s3l
           - ssc335
           - ssc338q
+          - ssc377
           - t31
           - t40
           - xm510
@@ -43,12 +44,12 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: Build toolchain
         run: |
           echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
+          echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts
+
           CONFIG=$(find br-ext-chip-* -name ${{matrix.platform}}_lite_defconfig)
           GCC=$(make BOARD=${CONFIG} toolname)
           echo GCC=${GCC} >> ${GITHUB_ENV}

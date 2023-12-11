@@ -15,6 +15,7 @@ define INGENIC_OSDRV_T20_INSTALL_TARGET_CMDS
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T20_PKGDIR)/files/sensor/params/*.bin
 
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T20_PKGDIR)/files/sensor/params/jxf22.bin
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T20_PKGDIR)/files/sensor/params/jxf23.bin
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T20_PKGDIR)/files/sensor/params/jxh42.bin
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T20_PKGDIR)/files/sensor/params/jxh62.bin
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T20_PKGDIR)/files/sensor/params/sc2135.bin
@@ -26,12 +27,12 @@ define INGENIC_OSDRV_T20_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(INGENIC_OSDRV_T20_PKGDIR)/files/kmod/audio.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(INGENIC_OSDRV_T20_PKGDIR)/files/kmod/audio2.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(INGENIC_OSDRV_T20_PKGDIR)/files/kmod/sinfo.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(INGENIC_OSDRV_T20_PKGDIR)/files/kmod/tx-isp-t10.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(INGENIC_OSDRV_T20_PKGDIR)/files/kmod/tx-isp-t20.ko
 	ln -sf tx-isp-t20.ko $(TARGET_DIR)/lib/modules/3.10.14/ingenic/tx-isp-t20l.ko
 
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(INGENIC_OSDRV_T20_PKGDIR)/files/kmod/sensor_jxf22.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(INGENIC_OSDRV_T20_PKGDIR)/files/kmod/sensor_jxf23.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(INGENIC_OSDRV_T20_PKGDIR)/files/kmod/sensor_jxh42.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(INGENIC_OSDRV_T20_PKGDIR)/files/kmod/sensor_jxh62.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(INGENIC_OSDRV_T20_PKGDIR)/files/kmod/sensor_sc2135.ko

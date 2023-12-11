@@ -4,9 +4,14 @@
 #
 ################################################################################
 
+ifeq ($(LOCAL_DOWNLOAD),y)
 RTL8189FS_OPENIPC_SITE_METHOD = git
-RTL8189FS_OPENIPC_SITE = https://github.com/jwrdegoede/rtl8189ES_linux
-RTL8189FS_OPENIPC_VERSION = $(shell git ls-remote $(RTL8189FS_OPENIPC_SITE) rtl8189fs | head -1 | awk '{ print $$1 }')
+RTL8189FS_OPENIPC_SITE = https://github.com/openipc/realtek-wlan
+RTL8189FS_OPENIPC_VERSION = $(shell git ls-remote $(RTL8189FS_OPENIPC_SITE) rtl8189fs | head -1 | cut -f1)
+else
+RTL8189FS_OPENIPC_SITE = https://github.com/openipc/realtek-wlan/archive
+RTL8189FS_OPENIPC_SOURCE = rtl8189fs.tar.gz
+endif
 
 RTL8189FS_OPENIPC_LICENSE = GPL-2.0
 RTL8189FS_OPENIPC_LICENSE_FILES = COPYING
