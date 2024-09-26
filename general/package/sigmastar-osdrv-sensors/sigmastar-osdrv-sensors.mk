@@ -4,17 +4,12 @@
 #
 ################################################################################
 
-SIGMASTAR_OSDRV_SENSORS_SITE = https://github.com/openipc/sensors/archive
-SIGMASTAR_OSDRV_SENSORS_SOURCE = master.tar.gz
+SIGMASTAR_OSDRV_SENSORS_SITE = $(call github,openipc,sensors,$(SIGMASTAR_OSDRV_SENSORS_VERSION))
+SIGMASTAR_OSDRV_SENSORS_VERSION = HEAD
 
-SIGMASTAR_OSDRV_SENSORS_LICENSE = MIT
-SIGMASTAR_OSDRV_SENSORS_LICENSE_FILES = LICENSE
+define SIGMASTAR_OSDRV_SENSORS_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/$(LINUX_VERSION_PROBED)/sigmastar
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/$(LINUX_VERSION_PROBED)/sigmastar $(@D)/sigmastar/$(OPENIPC_SOC_FAMILY)/*
+endef
 
-SIGMASTAR_OSDRV_SENSORS_MODULE_SUBDIRS = sigmastar/sources/$(OPENIPC_SOC_FAMILY)
-SIGMASTAR_OSDRV_SENSORS_MODULE_MAKE_OPTS = \
-	SENSOR_VERSION=$(OPENIPC_SOC_MODEL)-$(OPENIPC_SOC_FAMILY) \
-	INSTALL_MOD_DIR=sigmastar \
-	KSRC=$(LINUX_DIR)
-
-$(eval $(kernel-module))
 $(eval $(generic-package))
